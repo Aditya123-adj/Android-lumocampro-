@@ -115,22 +115,36 @@ class MainActivity : ComponentActivity() {
   top.addView(roundControl("⋮",21f,0x99BFC0C0.toInt()){settings()},LinearLayout.LayoutParams(d(42f),d(42f)).apply{leftMargin=d(7f)})
   root.addView(top,FrameLayout.LayoutParams(-1,d(54f),Gravity.TOP).apply{topMargin=d(35f)})
 
-  val quick=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER;setPadding(d(7f),d(4f),d(7f),d(4f));background=glass(24f,220)}
+  val topControls=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(d(9f),d(6f),d(9f),d(6f));background=glass(25f,225)}
+  val editRow=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL}
+  val editButton=chip("Edit",true,10f)
+  editRow.addView(editButton,LinearLayout.LayoutParams(-2,d(29f)))
+  editRow.addView(View(this),LinearLayout.LayoutParams(0,d(1f),1f))
+  editRow.addView(View(this).apply{background=GradientDrawable().apply{shape=GradientDrawable.OVAL;setColor(0xFFB9E8C6.toInt())}},LinearLayout.LayoutParams(d(7f),d(7f)))
+  topControls.addView(editRow,LinearLayout.LayoutParams(-1,d(31f)))
+  val quick=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER;setPadding(d(2f),d(2f),d(2f),0)}
   listOf("⚡" to "FLASH","◉" to "LIVE","▣" to "ASPECT","◷" to "TIMER","±" to "EXPOSURE","✧" to "STYLES").forEach{item->
-   quick.addView(txt(item.first,15f,Color.WHITE,true).apply{setPadding(d(8f),d(7f),d(8f),d(7f));contentDescription=item.second;setOnClickListener{controlAction(item.second)}})
+   quick.addView(txt(item.first,19f,Color.WHITE,true).apply{setPadding(d(9f),d(5f),d(9f),d(5f));contentDescription=item.second;setOnClickListener{controlAction(item.second)}})
   }
-  quick.setOnClickListener{toggleControls()}
-  root.addView(quick,FrameLayout.LayoutParams(-2,-2,Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply{topMargin=d(101f)})
-  root.addView(roundControl("⌄",19f,0x99202028.toInt()){toggleControls()},FrameLayout.LayoutParams(d(40f),d(40f),Gravity.TOP or Gravity.RIGHT).apply{rightMargin=d(12f);topMargin=d(98f)})
-  controlsPanel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER_HORIZONTAL;setPadding(d(14f),d(12f),d(14f),d(12f));background=glass(27f,242);visibility=View.GONE;elevation=d(18f).toFloat()}
-  controlsPanel.addView(txt("CAMERA CONTROLS",10f,0xFFD8D9E5.toInt(),true).apply{letterSpacing=.16f})
+  topControls.addView(quick)
+  editButton.setOnClickListener{
+   val editing=editButton.text.toString()=="Edit"
+   editButton.text=if(editing)"Cancel" else "Edit"
+   editButton.background=glass(20f,if(editing)245 else 185)
+   Toast.makeText(this,if(editing)"Drag controls customization preview" else "Editing closed",Toast.LENGTH_SHORT).show()
+  }
+  root.addView(topControls,FrameLayout.LayoutParams(-2,-2,Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply{topMargin=d(83f)})
+  controlsPanel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER_HORIZONTAL;setPadding(d(16f),d(15f),d(16f),d(13f));background=GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,intArrayOf(0xE52D303B.toInt(),0xD9161822.toInt())).apply{cornerRadii=floatArrayOf(d(38f).toFloat(),d(38f).toFloat(),d(38f).toFloat(),d(38f).toFloat(),d(18f).toFloat(),d(18f).toFloat(),d(18f).toFloat(),d(18f).toFloat());setStroke(d(1f),0x66FFFFFF)};visibility=View.GONE;elevation=d(22f).toFloat()}
+  controlsPanel.addView(txt("ADD PHOTO CONTROLS",11f,Color.WHITE,true).apply{letterSpacing=.08f})
   val controlRows=listOf(listOf("⚡" to "FLASH","◉" to "LIVE","▣" to "ASPECT"),listOf("◷" to "TIMER","±" to "EXPOSURE","✧" to "STYLES"),listOf("◈" to "FILTER","◉" to "DEPTH","☾" to "NIGHT"))
   controlRows.forEach{row->
    val line=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER}
    row.forEach{item->
-    val cell=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;background=GradientDrawable().apply{cornerRadius=d(15f).toFloat();setColor(0x443A3B49);setStroke(d(1f),0x55FFFFFF)};setPadding(d(5f),d(8f),d(5f),d(7f));isClickable=true;setOnClickListener{controlAction(item.second)}}
-    cell.addView(txt(item.first,19f,Color.WHITE,true));cell.addView(txt(item.second,8f,0xFFE0E1EA.toInt(),true))
-    line.addView(cell,LinearLayout.LayoutParams(0,d(65f),1f).apply{leftMargin=d(4f);rightMargin=d(4f);topMargin=d(4f);bottomMargin=d(4f)})
+    val cell=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(d(4f),d(7f),d(4f),d(7f));isClickable=true;isFocusable=true;setOnClickListener{controlAction(item.second)}}
+    val glyph=txt(item.first,23f,if(item.second=="STYLES")0xFFD6E8A5.toInt() else Color.WHITE,true)
+    cell.addView(glyph,LinearLayout.LayoutParams(d(48f),d(42f)))
+    cell.addView(txt(item.second,9f,0xFFE9EAF1.toInt(),true))
+    line.addView(cell,LinearLayout.LayoutParams(0,d(75f),1f).apply{leftMargin=d(3f);rightMargin=d(3f);topMargin=d(2f);bottomMargin=d(2f)})
    }
    controlsPanel.addView(line,LinearLayout.LayoutParams(-1,-2))
   }
