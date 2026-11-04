@@ -178,8 +178,8 @@ class MainActivity : ComponentActivity() {
   val all=arrayOf("Video","Photo","My Pose","Portrait","Pro Manual","Night","Panorama","Slow Motion","Time-lapse")
   android.app.AlertDialog.Builder(this).setTitle("Add / choose mode").setItems(all){_,i->
    val key=listOf("VIDEO","PHOTO","MY POSE","PORTRAIT","PRO","NIGHT","PANO","SLO-MO","TIME-LAPSE")[i]
-   if(!listOf("VIDEO","PHOTO","MY POSE").contains(key) && !modeStrip.children.any{(it as? TextView)?.text?.toString()==key}){
-    Toast.makeText(this,"Mode added to the swipe strip",Toast.LENGTH_SHORT).show()
+   if(!listOf("VIDEO","PHOTO","MY POSE").contains(key)){
+    Toast.makeText(this,"Mode selected in the swipe strip",Toast.LENGTH_SHORT).show()
    }
    selectMode(key)
    val target=modeStrip.getChildAt(listOf("VIDEO","PHOTO","MY POSE","PORTRAIT","PRO","NIGHT","PANO","SLO-MO","TIME-LAPSE").indexOf(key))
