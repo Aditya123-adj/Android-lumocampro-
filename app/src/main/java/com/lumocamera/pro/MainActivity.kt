@@ -37,6 +37,8 @@ class MainActivity : ComponentActivity() {
  private var portraitStyle="Natural"
  private var selectedMode="PHOTO"
  private lateinit var modeStrip:LinearLayout
+ private lateinit var portraitPanel:LinearLayout
+ private lateinit var posePanel:LinearLayout
  private var isRecording=false
  private var front=false
  private var zoom=1f
@@ -84,10 +86,6 @@ class MainActivity : ComponentActivity() {
   isClickable=true;isFocusable=true;setOnClickListener{action()}
   elevation=d(3f).toFloat()
  }
- private fun roundControl(symbol:String, size:Float=21f, fill:Int=0x55000000, action:()->Unit)=txt(symbol,size,Color.WHITE,true).apply{
-  background=GradientDrawable().apply{shape=GradientDrawable.OVAL;setColor(fill);setStroke(d(1f),0x55FFFFFF)}
-  isClickable=true;isFocusable=true;setOnClickListener{action()};elevation=d(3f).toFloat()
- }
  private fun capsule()=GradientDrawable().apply{cornerRadius=d(30f).toFloat();setColor(0xBFC9C9C9.toInt());setStroke(d(1f),0x99FFFFFF.toInt())}
  private fun makeUi(){
   val root=FrameLayout(this).apply{setBackgroundColor(0xFF777777.toInt())}
@@ -117,10 +115,50 @@ class MainActivity : ComponentActivity() {
   root.addView(roundControl("↻",20f,0x99BFC0C0.toInt()){settings()},FrameLayout.LayoutParams(d(42f),d(42f),Gravity.TOP or Gravity.RIGHT).apply{rightMargin=d(14f);topMargin=d(101f)})
 
   filterPanel=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER;visibility=View.GONE;setPadding(d(8f),d(5f),d(8f),d(5f));background=capsule()}
-  listOf("Natural","Soft","Studio","Contour","Night").forEach{n->
-   filterPanel.addView(txt(n,10f,Color.WHITE,true).apply{setPadding(d(9f),d(8f),d(9f),d(8f));setOnClickListener{portraitStyle=n;Toast.makeText(this@MainActivity,"$n style selected",Toast.LENGTH_SHORT).show()}})
+  listOf("Original","Natural","Soft","Vivid","Warm","Cool","Dramatic","Mono").forEach{n->
+   filterPanel.addView(txt(n,10f,Color.WHITE,true).apply{setPadding(d(9f),d(8f),d(9f),d(8f));setOnClickListener{portraitStyle=n;filterPanel.childrenSetSelected(this);Toast.makeText(this@MainActivity,"$n style selected",Toast.LENGTH_SHORT).show()}})
   }
   root.addView(filterPanel,FrameLayout.LayoutParams(-2,-2,Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply{bottomMargin=d(260f)})
+
+  portraitPanel=LinearLayout(this).apply{
+   orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER_HORIZONTAL
+   setPadding(d(14f),d(7f),d(14f),d(5f));background=capsule();visibility=View.GONE
+  }
+  val blurLabel=txt("PORTRAIT BLUR  •  $portraitBlur%",10f,Color.WHITE,true)
+  portraitPanel.addView(blurLabel)
+  val blurSeek=SeekBar(this).apply{max=100;progress=portraitBlur}
+  portraitPanel.addView(blurSeek,LinearLayout.LayoutParams(d(240f),d(28f)))
+  blurSeek.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{
+   override fun onProgressChanged(s:SeekBar?,v:Int,user:Boolean){portraitBlur=v;blurLabel.text="PORTRAIT BLUR  •  $v%"}
+   override fun onStartTrackingTouch(s:SeekBar?){}
+   override fun onStopTrackingTouch(s:SeekBar?){}
+  })
+  root.addView(portraitPanel,FrameLayout.LayoutParams(-2,-2,Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply{bottomMargin=d(215f)})
+
+  posePanel=LinearLayout(this).apply{
+   orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER_HORIZONTAL
+   setPadding(d(12f),d(8f),d(12f),d(8f));background=capsule();visibility=View.GONE
+  }
+  val poseActions=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER}
+  poseActions.addView(chip("＋ Add pose",true).apply{setOnClickListener{posePicker.launch("image/*")}})
+  listOf("♙","♟","♙","♟").forEach{symbol->poseActions.addView(txt(symbol,19f,Color.WHITE,true).apply{setPadding(d(10f),d(6f),d(10f),d(6f))})}
+  posePanel.addView(poseActions)
+  val alphaLabel=txt("OPACITY",9f,Color.WHITE,true);posePanel.addView(alphaLabel)
+  val alphaControl=SeekBar(this).apply{max=100;progress=(poseAlpha*100).toInt()}
+  posePanel.addView(alphaControl)
+  alphaControl.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{
+   override fun onProgressChanged(s:SeekBar?,v:Int,user:Boolean){poseAlpha=v/100f;pose.imageAlpha=poseAlpha;pose.invalidate()}
+   override fun onStartTrackingTouch(s:SeekBar?){}
+   override fun onStopTrackingTouch(s:SeekBar?){}
+  })
+  val sizeLabel=txt("SIZE",9f,Color.WHITE,true);posePanel.addView(sizeLabel)
+  val sizeControl=SeekBar(this).apply{max=100;progress=((poseScale-.25f)/1.25f*100).toInt().coerceIn(0,100)}
+  posePanel.addView(sizeControl)
+  sizeControl.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{
+   override fun onProgressChanged(s:SeekBar?,v:Int,user:Boolean){poseScale=.25f+1.25f*v/100f;pose.imageScale=poseScale;pose.invalidate()}
+   override fun onStartTrackingTouch(s:SeekBar?){}
+   override fun onStopTrackingTouch(s:SeekBar?){}
+  })
 
   val lower=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER_HORIZONTAL;setPadding(d(10f),d(9f),d(10f),d(8f));background=GradientDrawable().apply{cornerRadius=d(32f).toFloat();setColor(0x66333333)}}
   val zooms=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER;setPadding(d(10f),d(4f),d(10f),d(4f));background=capsule()}
@@ -167,10 +205,10 @@ class MainActivity : ComponentActivity() {
  private fun selectMode(label:String){
   selectedMode=label
   when(label){
-   "MY POSE"->{openPoseSection();return}
+   "MY POSE"->{poseOn=true;pose.visibility=View.VISIBLE;posePanel.visibility=View.VISIBLE;portraitPanel.visibility=View.GONE;filterPanel.visibility=View.GONE;rebuildModes();refresh();return}
    "VIDEO","SLO-MO","TIME-LAPSE"->{videoMode=true;portraitMode=false}
-   "PORTRAIT"->{videoMode=false;portraitMode=true;filtersOn=true;filterPanel.visibility=View.VISIBLE;showPortraitControls()}
-   else->{videoMode=false;portraitMode=false;filterPanel.visibility=View.GONE}
+   "PORTRAIT"->{videoMode=false;portraitMode=true;filtersOn=true;posePanel.visibility=View.GONE;filterPanel.visibility=View.VISIBLE;portraitPanel.visibility=View.VISIBLE}
+   else->{videoMode=false;portraitMode=false;posePanel.visibility=View.GONE;portraitPanel.visibility=View.GONE;filterPanel.visibility=View.GONE}
   }
   rebuildModes();refresh()
  }
@@ -186,18 +224,7 @@ class MainActivity : ComponentActivity() {
    if(target!=null) (modeStrip.parent as? HorizontalScrollView)?.smoothScrollTo(target.left,0)
   }.show()
  }
- private fun showPortraitControls(){
-  val layout=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(d(16f),d(8f),d(16f),d(8f));background=capsule()}
-  layout.addView(txt("PORTRAIT BLUR  •  $portraitBlur%",11f,Color.WHITE,true))
-  val blur=SeekBar(this).apply{max=100;progress=portraitBlur}
-  layout.addView(blur)
-  blur.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{
-   override fun onProgressChanged(s:SeekBar?,v:Int,user:Boolean){portraitBlur=v}
-   override fun onStartTrackingTouch(s:SeekBar?){}
-   override fun onStopTrackingTouch(s:SeekBar?){}
-  })
-  android.app.AlertDialog.Builder(this).setTitle("Portrait depth & style").setView(layout).setPositiveButton("Done",null).show()
- }
+ private fun showPortraitControls(){portraitPanel.visibility=View.VISIBLE;filterPanel.visibility=View.VISIBLE}
 
  private fun loadPose(uri:Uri){
   try{
@@ -243,6 +270,7 @@ class MainActivity : ComponentActivity() {
  }
 
  private fun refresh(){
+  if(::modeStrip.isInitialized)rebuildModes()
   shutter.text=if(isRecording)"■" else "●"
   status.text=if(isRecording)"● RECORDING" else if(videoMode)"VIDEO  •  TAP SHUTTER TO RECORD" else "PHOTO  •  TAP TO FOCUS"
   qualityText.text=if(videoMode)"VIDEO QUALITY  •  "+(if(quality==Quality.UHD)"4K" else "FHD")+"  ↻" else "PHOTO  •  MAX QUALITY"
