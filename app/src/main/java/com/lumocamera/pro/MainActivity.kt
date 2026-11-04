@@ -49,6 +49,9 @@ class MainActivity : ComponentActivity() {
  private lateinit var qualityText:TextView
  private lateinit var pose:PoseView
  private lateinit var filterPanel:LinearLayout
+ private lateinit var controlsPanel:LinearLayout
+ private var controlsExpanded=false
+ private var flashEnabled=false
  private var filtersOn=false
  private var poseAlpha=0.42f
  private var poseScale=0.72f
@@ -88,7 +91,7 @@ class MainActivity : ComponentActivity() {
  }
  private fun capsule()=GradientDrawable().apply{cornerRadius=d(30f).toFloat();setColor(0xBFC9C9C9.toInt());setStroke(d(1f),0x99FFFFFF.toInt())}
  private fun makeUi(){
-  val root=FrameLayout(this).apply{setBackgroundColor(0xFF777777.toInt())}
+  val root=FrameLayout(this).apply{setBackgroundColor(Color.BLACK)}
   preview=PreviewView(this).apply{scaleType=PreviewView.ScaleType.FILL_CENTER;implementationMode=PreviewView.ImplementationMode.COMPATIBLE}
   root.addView(preview,FrameLayout.LayoutParams(-1,-1))
   pose=PoseView(this);root.addView(pose,FrameLayout.LayoutParams(-1,-1))
@@ -108,11 +111,32 @@ class MainActivity : ComponentActivity() {
   top.addView(roundControl("⋮",21f,0x99BFC0C0.toInt()){settings()},LinearLayout.LayoutParams(d(42f),d(42f)).apply{leftMargin=d(7f)})
   root.addView(top,FrameLayout.LayoutParams(-1,d(54f),Gravity.TOP).apply{topMargin=d(35f)})
 
-  val quick=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER;setPadding(d(8f),d(5f),d(8f),d(5f));background=capsule()}
-  quick.addView(txt("ϟ",17f,Color.WHITE,true).apply{setPadding(d(12f),d(5f),d(12f),d(5f));setOnClickListener{Toast.makeText(this@MainActivity,"Flash setting",Toast.LENGTH_SHORT).show()}})
-  quick.addView(txt("▦",16f,Color.WHITE,true).apply{setPadding(d(12f),d(5f),d(12f),d(5f));setOnClickListener{Toast.makeText(this@MainActivity,"Grid settings",Toast.LENGTH_SHORT).show()}})
-  root.addView(quick,FrameLayout.LayoutParams(-2,-2,Gravity.TOP or Gravity.LEFT).apply{leftMargin=d(13f);topMargin=d(101f)})
-  root.addView(roundControl("↻",20f,0x99BFC0C0.toInt()){settings()},FrameLayout.LayoutParams(d(42f),d(42f),Gravity.TOP or Gravity.RIGHT).apply{rightMargin=d(14f);topMargin=d(101f)})
+  val quick=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER;setPadding(d(7f),d(4f),d(7f),d(4f));background=glass(24f,220)}
+  listOf("⚡" to "FLASH","◉" to "LIVE","▣" to "ASPECT","◷" to "TIMER","±" to "EXPOSURE","✧" to "STYLES").forEach{item->
+   quick.addView(txt(item.first,15f,Color.WHITE,true).apply{setPadding(d(8f),d(7f),d(8f),d(7f));contentDescription=item.second;setOnClickListener{controlAction(item.second)}})
+  }
+  quick.setOnClickListener{toggleControls()}
+  root.addView(quick,FrameLayout.LayoutParams(-2,-2,Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply{topMargin=d(101f)})
+  root.addView(roundControl("⌄",19f,0x99202028.toInt()){toggleControls()},FrameLayout.LayoutParams(d(40f),d(40f),Gravity.TOP or Gravity.RIGHT).apply{rightMargin=d(12f);topMargin=d(98f)})
+  controlsPanel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER_HORIZONTAL;setPadding(d(14f),d(12f),d(14f),d(12f));background=glass(27f,242);visibility=View.GONE;elevation=d(18f).toFloat()}
+  controlsPanel.addView(txt("CAMERA CONTROLS",10f,0xFFD8D9E5.toInt(),true).apply{letterSpacing=.16f})
+  val controlRows=listOf(listOf("⚡" to "FLASH","◉" to "LIVE","▣" to "ASPECT"),listOf("◷" to "TIMER","±" to "EXPOSURE","✧" to "STYLES"),listOf("◈" to "FILTER","◉" to "DEPTH","☾" to "NIGHT"))
+  controlRows.forEach{row->
+   val line=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER}
+   row.forEach{item->
+    val cell=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;background=GradientDrawable().apply{cornerRadius=d(15f).toFloat();setColor(0x443A3B49);setStroke(d(1f),0x55FFFFFF)};setPadding(d(5f),d(8f),d(5f),d(7f));isClickable=true;setOnClickListener{controlAction(item.second)}}
+    cell.addView(txt(item.first,19f,Color.WHITE,true));cell.addView(txt(item.second,8f,0xFFE0E1EA.toInt(),true))
+    line.addView(cell,LinearLayout.LayoutParams(0,d(65f),1f).apply{leftMargin=d(4f);rightMargin=d(4f);topMargin=d(4f);bottomMargin=d(4f)})
+   }
+   controlsPanel.addView(line,LinearLayout.LayoutParams(-1,-2))
+  }
+  val panelFooter=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL}
+  panelFooter.addView(txt("ADD PHOTO CONTROLS",9f,0xFFBFC1CE.toInt(),true).apply{gravity=Gravity.CENTER_VERTICAL;setPadding(d(4f),0,0,0)},LinearLayout.LayoutParams(0,d(34f),1f))
+  panelFooter.addView(chip("EDIT",true,10f).apply{setOnClickListener{editQuickControls()}},LinearLayout.LayoutParams(-2,-2))
+  panelFooter.addView(chip("DONE",false,10f).apply{setOnClickListener{toggleControls(false)}},LinearLayout.LayoutParams(-2,-2).apply{leftMargin=d(6f)})
+  controlsPanel.addView(panelFooter)
+  root.addView(controlsPanel,FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply{leftMargin=d(18f);rightMargin=d(18f);bottomMargin=d(220f)})
+
 
   filterPanel=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER;visibility=View.GONE;setPadding(d(8f),d(5f),d(8f),d(5f));background=capsule()}
   listOf("Original","Natural","Soft","Vivid","Warm","Cool","Dramatic","Mono").forEach{n->
@@ -187,6 +211,32 @@ class MainActivity : ComponentActivity() {
   setContentView(root)
   lower.translationY=d(35f).toFloat();lower.alpha=0f
   lower.animate().translationY(0f).alpha(1f).setDuration(430).setInterpolator(DecelerateInterpolator()).start()
+ }
+ private fun toggleControls(force:Boolean?=null){
+  controlsExpanded=force?:!controlsExpanded
+  if(controlsExpanded){controlsPanel.visibility=View.VISIBLE;controlsPanel.alpha=0f;controlsPanel.translationY=d(18f).toFloat();controlsPanel.animate().alpha(1f).translationY(0f).setDuration(230).setInterpolator(DecelerateInterpolator()).start()}
+  else{controlsPanel.animate().alpha(0f).translationY(d(18f).toFloat()).setDuration(180).withEndAction{controlsPanel.visibility=View.GONE}.start()}
+ }
+ private fun controlAction(name:String){
+  when(name){
+   "FLASH"->{flashEnabled=!flashEnabled;camera?.cameraControl?.enableTorch(flashEnabled);Toast.makeText(this,if(flashEnabled)"Flash on" else "Flash off",Toast.LENGTH_SHORT).show()}
+   "LIVE"->Toast.makeText(this,"Live Photo is not available in this CameraX capture pipeline yet",Toast.LENGTH_SHORT).show()
+   "ASPECT"->android.app.AlertDialog.Builder(this).setTitle("Aspect ratio").setItems(arrayOf("4:3","16:9","Full screen")){_,i->Toast.makeText(this,arrayOf("4:3","16:9","Full screen")[i]+" selected",Toast.LENGTH_SHORT).show()}.show()
+   "TIMER"->android.app.AlertDialog.Builder(this).setTitle("Capture timer").setItems(arrayOf("Off","3 seconds","10 seconds")){_,i->Toast.makeText(this,arrayOf("Timer off","3 second timer selected","10 second timer selected")[i],Toast.LENGTH_SHORT).show()}.show()
+   "EXPOSURE"->exposure()
+   "STYLES"->showStylePicker()
+   "FILTER"->{filtersOn=!filtersOn;filterPanel.visibility=if(filtersOn)View.VISIBLE else View.GONE}
+   "DEPTH"->{selectMode("PORTRAIT");toggleControls(false)}
+   "NIGHT"->{selectMode("NIGHT");toggleControls(false)}
+  }
+ }
+ private fun showStylePicker(){
+  val styles=arrayOf("Standard","Natural","Rich Contrast","Vibrant","Warm","Cool","Mono")
+  android.app.AlertDialog.Builder(this).setTitle("Photographic styles").setItems(styles){_,i->portraitStyle=styles[i];Toast.makeText(this,styles[i]+" selected",Toast.LENGTH_SHORT).show()}.show()
+ }
+ private fun editQuickControls(){
+  val options=arrayOf("Flash","Live","Aspect","Timer","Exposure","Styles","Filter","Depth","Night")
+  android.app.AlertDialog.Builder(this).setTitle("Customize controls").setMultiChoiceItems(options,BooleanArray(options.size){true}){_,_,_->}.setPositiveButton("DONE"){_,_->Toast.makeText(this,"Quick controls updated",Toast.LENGTH_SHORT).show()}.setNegativeButton("CANCEL",null).show()
  }
  private fun rebuildModes(){
   modeStrip.removeAllViews()
