@@ -29,7 +29,7 @@ class MainActivity : ComponentActivity() {
  private val executor=Executors.newSingleThreadExecutor()
  private var still:ImageCapture?=null
  private var video:VideoCapture<Recorder>?=null
- private var camera:Camera?=null
+ private var camera:androidx.camera.core.Camera?=null
  private var recording:Recording?=null
  private var videoMode=false
  private var isRecording=false
@@ -172,7 +172,8 @@ class MainActivity : ComponentActivity() {
   })
   dialog.show()
  }
-\n private fun refresh(){
+
+ private fun refresh(){
   shutter.text=if(isRecording)"■" else "●"
   status.text=if(isRecording)"● RECORDING" else if(videoMode)"VIDEO  •  TAP SHUTTER TO RECORD" else "PHOTO  •  TAP TO FOCUS"
   qualityText.text=if(videoMode)"VIDEO QUALITY  •  "+(if(quality==Quality.UHD)"4K" else "FHD")+"  ↻" else "PHOTO  •  MAX QUALITY"
@@ -183,7 +184,7 @@ class MainActivity : ComponentActivity() {
    val provider=future.get();val selector=if(front)CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
    val p=Preview.Builder().build().also{it.setSurfaceProvider(preview.surfaceProvider)}
    still=ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY).build()
-   val rec=Recorder.Builder().setQualitySelector(QualitySelector.from(listOf(quality,Quality.FHD,Quality.HD),FallbackStrategy.lowerQualityOrHigherThan(Quality.SD))).build()
+   val rec=Recorder.Builder().setQualitySelector(QualitySelector.from(quality,FallbackStrategy.lowerQualityOrHigherThan(Quality.SD))).build()
    video=VideoCapture.withOutput(rec)
    try{provider.unbindAll();camera=provider.bindToLifecycle(this,selector,p,still,video);setZoom(zoom)}
    catch(e:Exception){Toast.makeText(this,"Camera error: "+(e.localizedMessage?:"unsupported"),Toast.LENGTH_LONG).show()}
@@ -274,5 +275,4 @@ class MainActivity : ComponentActivity() {
    }
   }
  }
-}
 }
