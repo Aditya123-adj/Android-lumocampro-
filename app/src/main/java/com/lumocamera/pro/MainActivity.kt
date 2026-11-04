@@ -116,7 +116,7 @@ class MainActivity : ComponentActivity() {
 
   filterPanel=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER;visibility=View.GONE;setPadding(d(8f),d(5f),d(8f),d(5f));background=capsule()}
   listOf("Original","Natural","Soft","Vivid","Warm","Cool","Dramatic","Mono").forEach{n->
-   filterPanel.addView(txt(n,10f,Color.WHITE,true).apply{setPadding(d(9f),d(8f),d(9f),d(8f));setOnClickListener{portraitStyle=n;filterPanel.childrenSetSelected(this);Toast.makeText(this@MainActivity,"$n style selected",Toast.LENGTH_SHORT).show()}})
+   filterPanel.addView(txt(n,10f,Color.WHITE,true).apply{setPadding(d(9f),d(8f),d(9f),d(8f));setOnClickListener{portraitStyle=n;Toast.makeText(this@MainActivity,"$n style selected",Toast.LENGTH_SHORT).show()}})
   }
   root.addView(filterPanel,FrameLayout.LayoutParams(-2,-2,Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply{bottomMargin=d(260f)})
 
