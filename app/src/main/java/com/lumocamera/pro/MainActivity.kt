@@ -239,19 +239,32 @@ class MainActivity : ComponentActivity() {
  override fun onDestroy(){recording?.stop();executor.shutdown();super.onDestroy()}
 
  private class PoseView(c:android.content.Context):View(c){
-  private val p=Paint(Paint.ANTI_ALIAS_FLAG).apply{color=0xBFFFFFFF.toInt();strokeWidth=2f;style=Paint.Style.STROKE;pathEffect=DashPathEffect(floatArrayOf(9f,8f),0f)}
-  init{visibility=View.GONE}
+  private var lastX=0f
+  private var lastY=0f
+  init{visibility=View.GONE;isClickable=true}
   var reference:Bitmap?=null
   var imageAlpha=0.42f
   var imageScale=0.72f
   var imageOffsetX=0f
   var imageOffsetY=0f
+  override fun onTouchEvent(event:MotionEvent):Boolean{
+   when(event.action){
+    MotionEvent.ACTION_DOWN->{lastX=event.x;lastY=event.y;return true}
+    MotionEvent.ACTION_MOVE->{
+     imageOffsetX+=(event.x-lastX)/width.coerceAtLeast(1)
+     imageOffsetY+=(event.y-lastY)/height.coerceAtLeast(1)
+     lastX=event.x;lastY=event.y;invalidate();return true
+    }
+    MotionEvent.ACTION_UP->{performClick();return true}
+   }
+   return true
+  }
+  override fun performClick():Boolean{super.performClick();return true}
   override fun onDraw(c:Canvas){
    super.onDraw(c)
    val bmp=reference
    if(bmp!=null){
-    val maxW=width*imageScale
-    val maxH=height*imageScale
+    val maxW=width*imageScale;val maxH=height*imageScale
     val ratio=minOf(maxW/bmp.width,maxH/bmp.height)
     val dw=bmp.width*ratio;val dh=bmp.height*ratio
     val left=(width-dw)/2+imageOffsetX*width
@@ -261,4 +274,5 @@ class MainActivity : ComponentActivity() {
    }
   }
  }
+}
 }
