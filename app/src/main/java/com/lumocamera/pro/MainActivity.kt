@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.ContentValues
 import android.content.pm.PackageManager
 import android.graphics.*
+import android.net.Uri
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.provider.MediaStore
@@ -42,6 +43,10 @@ class MainActivity : ComponentActivity() {
  private lateinit var pose:PoseView
  private lateinit var filterPanel:LinearLayout
  private var filtersOn=false
+ private var poseAlpha=0.42f
+ private var poseScale=0.72f
+ private var poseBitmap:Bitmap?=null
+ private val posePicker=registerForActivityResult(ActivityResultContracts.GetContent()){ uri -> if(uri!=null) loadPose(uri) }
 
  private val permission=registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
   if(it[Manifest.permission.CAMERA]==true) startCamera()
@@ -113,6 +118,7 @@ class MainActivity : ComponentActivity() {
   val modes=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER}
   modes.addView(chip("PHOTO",true).apply{setOnClickListener{videoMode=false;refresh()}})
   modes.addView(chip("VIDEO").apply{setOnClickListener{videoMode=true;refresh()}})
+  modes.addView(chip("MY POSE",true).apply{setOnClickListener{openPoseSection()}})
   panel.addView(modes)
   qualityText=txt("PHOTO  •  MAX QUALITY",9f,0xFFD2CBE4.toInt(),true).apply{setPadding(0,d(7f),0,0);setOnClickListener{quality=if(quality==Quality.FHD)Quality.UHD else Quality.FHD;refresh();startCamera()}}
   panel.addView(qualityText)
@@ -123,7 +129,50 @@ class MainActivity : ComponentActivity() {
   panel.translationY=d(40f).toFloat();panel.alpha=0f
   panel.animate().translationY(0f).alpha(1f).setDuration(650).setInterpolator(DecelerateInterpolator()).start()
  }
- private fun refresh(){
+
+ private fun loadPose(uri:Uri){
+  try{
+   val source=contentResolver.openInputStream(uri)
+   val bmp=source?.use{BitmapFactory.decodeStream(it)}
+   if(bmp==null){Toast.makeText(this,"Could not load this image",Toast.LENGTH_SHORT).show();return}
+   poseBitmap=bmp
+   pose.reference=bmp;pose.imageAlpha=poseAlpha;pose.imageScale=poseScale
+   pose.visibility=View.VISIBLE;poseOn=true;pose.invalidate()
+   Toast.makeText(this,"Reference pose loaded",Toast.LENGTH_SHORT).show()
+  }catch(e:Exception){Toast.makeText(this,"Image could not be opened",Toast.LENGTH_SHORT).show()}
+ }
+ private fun openPoseSection(){
+  val options=arrayOf("Upload reference image","Adjust transparency and size","Remove reference image")
+  android.app.AlertDialog.Builder(this).setTitle("MY POSE").setItems(options){_,which->
+   when(which){
+    0->posePicker.launch("image/*")
+    1->adjustPose()
+    2->{poseBitmap=null;pose.reference=null;pose.invalidate();pose.visibility=View.GONE;poseOn=false}
+   }
+  }.show()
+ }
+ private fun adjustPose(){
+  val layout=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(d(20f),d(12f),d(20f),d(8f))}
+  layout.addView(txt("TRANSPARENCY",12f,Color.WHITE,true))
+  val alphaSeek=SeekBar(this).apply{max=100;progress=(poseAlpha*100).toInt()}
+  layout.addView(alphaSeek)
+  layout.addView(txt("REFERENCE SIZE",12f,Color.WHITE,true))
+  val sizeSeek=SeekBar(this).apply{max=100;progress=((poseScale-.25f)/1.25f*100).toInt().coerceIn(0,100)}
+  layout.addView(sizeSeek)
+  val dialog=android.app.AlertDialog.Builder(this).setTitle("MY POSE CONTROLS").setView(layout).setPositiveButton("DONE",null).setNegativeButton("CANCEL",null).create()
+  alphaSeek.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{
+   override fun onProgressChanged(s:SeekBar?,v:Int,user:Boolean){poseAlpha=v/100f;pose.imageAlpha=poseAlpha;pose.invalidate()}
+   override fun onStartTrackingTouch(s:SeekBar?){}
+   override fun onStopTrackingTouch(s:SeekBar?){}
+  })
+  sizeSeek.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{
+   override fun onProgressChanged(s:SeekBar?,v:Int,user:Boolean){poseScale=.25f+1.25f*v/100f;pose.imageScale=poseScale;pose.invalidate()}
+   override fun onStartTrackingTouch(s:SeekBar?){}
+   override fun onStopTrackingTouch(s:SeekBar?){}
+  })
+  dialog.show()
+ }
+\n private fun refresh(){
   shutter.text=if(isRecording)"■" else "●"
   status.text=if(isRecording)"● RECORDING" else if(videoMode)"VIDEO  •  TAP SHUTTER TO RECORD" else "PHOTO  •  TAP TO FOCUS"
   qualityText.text=if(videoMode)"VIDEO QUALITY  •  "+(if(quality==Quality.UHD)"4K" else "FHD")+"  ↻" else "PHOTO  •  MAX QUALITY"
@@ -192,9 +241,24 @@ class MainActivity : ComponentActivity() {
  private class PoseView(c:android.content.Context):View(c){
   private val p=Paint(Paint.ANTI_ALIAS_FLAG).apply{color=0xBFFFFFFF.toInt();strokeWidth=2f;style=Paint.Style.STROKE;pathEffect=DashPathEffect(floatArrayOf(9f,8f),0f)}
   init{visibility=View.GONE}
-  override fun onDraw(c:Canvas){super.onDraw(c);val w=width.toFloat();val h=height.toFloat();val x=w/2;val y=h*.34f
-   c.drawLine(w/3,0f,w/3,h,p);c.drawLine(2*w/3,0f,2*w/3,h,p);c.drawLine(0f,h/3,w,h/3,p);c.drawLine(0f,2*h/3,w,2*h/3,p)
-   c.drawCircle(x,y,w*.055f,p);c.drawLine(x,y+w*.055f,x,h*.67f,p);c.drawLine(x,h*.45f,w*.36f,h*.57f,p);c.drawLine(x,h*.45f,w*.64f,h*.57f,p);c.drawLine(x,h*.67f,w*.39f,h*.88f,p);c.drawLine(x,h*.67f,w*.61f,h*.88f,p)
+  var reference:Bitmap?=null
+  var imageAlpha=0.42f
+  var imageScale=0.72f
+  var imageOffsetX=0f
+  var imageOffsetY=0f
+  override fun onDraw(c:Canvas){
+   super.onDraw(c)
+   val bmp=reference
+   if(bmp!=null){
+    val maxW=width*imageScale
+    val maxH=height*imageScale
+    val ratio=minOf(maxW/bmp.width,maxH/bmp.height)
+    val dw=bmp.width*ratio;val dh=bmp.height*ratio
+    val left=(width-dw)/2+imageOffsetX*width
+    val top=(height-dh)/2+imageOffsetY*height
+    val paint=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply{alpha=(imageAlpha*255).toInt()}
+    c.drawBitmap(bmp,null,RectF(left,top,left+dw,top+dh),paint)
+   }
   }
  }
 }
