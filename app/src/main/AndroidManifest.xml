@@ -3,9 +3,20 @@
     <uses-feature android:name="android.hardware.camera.any" android:required="true"/>
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-    <application android:allowBackup="false" android:label="Lumo Camera Pro" android:theme="@android:style/Theme.Material.NoActionBar">
-        <activity android:name=".MainActivity" android:screenOrientation="portrait" android:exported="true">
-            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+    <application
+        android:allowBackup="false"
+        android:label="Lumo Camera Pro"
+        android:icon="@drawable/ic_launcher"
+        android:roundIcon="@drawable/ic_launcher"
+        android:theme="@android:style/Theme.Material.NoActionBar">
+        <activity
+            android:name=".MainActivity"
+            android:screenOrientation="portrait"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
         </activity>
     </application>
 </manifest>
