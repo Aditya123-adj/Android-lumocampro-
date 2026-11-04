@@ -89,19 +89,23 @@ class MainActivity : ComponentActivity() {
   isClickable=true;isFocusable=true;setOnClickListener{action()}
   elevation=d(3f).toFloat()
  }
- private fun capsule()=GradientDrawable().apply{cornerRadius=d(30f).toFloat();setColor(0xBFC9C9C9.toInt());setStroke(d(1f),0x99FFFFFF.toInt())}
+ private fun capsule()=GradientDrawable(GradientDrawable.Orientation.TL_BR,intArrayOf(0xD92A2B35.toInt(),0xC9101118.toInt())).apply{cornerRadius=d(30f).toFloat();setStroke(d(1f),0x77FFFFFF)}
  private fun makeUi(){
   val root=FrameLayout(this).apply{setBackgroundColor(Color.BLACK)}
   preview=PreviewView(this).apply{scaleType=PreviewView.ScaleType.FILL_CENTER;implementationMode=PreviewView.ImplementationMode.COMPATIBLE}
   root.addView(preview,FrameLayout.LayoutParams(-1,-1))
   pose=PoseView(this);root.addView(pose,FrameLayout.LayoutParams(-1,-1))
-  preview.setOnTouchListener{_,e->if(e.action==MotionEvent.ACTION_UP){
-   val point=preview.meteringPointFactory.createPoint(e.x,e.y)
-   camera?.cameraControl?.startFocusAndMetering(FocusMeteringAction.Builder(point).build())
-   val ring=View(this).apply{background=GradientDrawable().apply{shape=GradientDrawable.OVAL;setColor(Color.TRANSPARENT);setStroke(d(1.5f),Color.WHITE)}}
-   val lp=FrameLayout.LayoutParams(d(54f),d(54f));lp.leftMargin=e.x.toInt()-d(27f);lp.topMargin=e.y.toInt()-d(27f)
-   root.addView(ring,lp);ring.animate().scaleX(1.2f).scaleY(1.2f).alpha(0f).setDuration(650).withEndAction{root.removeView(ring)}.start()
-  };true}
+  preview.setOnTouchListener{_,e->
+   if(e.action==MotionEvent.ACTION_UP){
+    val px=e.x.coerceIn(d(30f).toFloat(),(preview.width-d(30f)).toFloat())
+    val py=e.y.coerceIn(d(70f).toFloat(),(preview.height-d(150f)).toFloat())
+    val point=preview.meteringPointFactory.createPoint(px,py)
+    val action=FocusMeteringAction.Builder(point).setAutoCancelDuration(5,java.util.concurrent.TimeUnit.SECONDS).build()
+    camera?.cameraControl?.startFocusAndMetering(action)
+    showFocusExposure(root,px,py)
+   }
+   true
+  }
 
   val top=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(d(14f),0,d(14f),0)}
   top.addView(roundControl("×",23f,0x99BFC0C0.toInt()){Toast.makeText(this,"Camera view",Toast.LENGTH_SHORT).show()},LinearLayout.LayoutParams(d(42f),d(42f)))
@@ -211,6 +215,61 @@ class MainActivity : ComponentActivity() {
   setContentView(root)
   lower.translationY=d(35f).toFloat();lower.alpha=0f
   lower.animate().translationY(0f).alpha(1f).setDuration(430).setInterpolator(DecelerateInterpolator()).start()
+ }
+ private fun showFocusExposure(root:FrameLayout,x:Float,y:Float){
+  val ring=View(this).apply{
+   background=GradientDrawable().apply{shape=GradientDrawable.OVAL;setColor(Color.TRANSPARENT);setStroke(d(1.5f),0xFFFFD76A.toInt())}
+   elevation=d(20f).toFloat()
+  }
+  val ringLp=FrameLayout.LayoutParams(d(62f),d(62f))
+  ringLp.leftMargin=(x-d(31f)).toInt();ringLp.topMargin=(y-d(31f)).toInt()
+  root.addView(ring,ringLp)
+  ring.animate().scaleX(1.08f).scaleY(1.08f).setDuration(150).withEndAction{
+   ring.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
+  }.start()
+  val range=camera?.cameraInfo?.exposureState?.exposureCompensationRange
+  if(range==null || range.lower==range.upper){
+   status.text="FOCUS LOCKED  •  EV NOT SUPPORTED"
+   ring.postDelayed({root.removeView(ring)},1800)
+   return
+  }
+  val evStep=camera?.cameraInfo?.exposureState?.exposureCompensationStep
+  val current=camera?.cameraInfo?.exposureState?.exposureCompensationIndex?:0
+  val evLabel=txt("EV  "+String.format(Locale.US,"%+.1f",current*(evStep?.toFloat()?:1f)),10f,Color.WHITE,true)
+  val seek=SeekBar(this).apply{
+   max=range.upper-range.lower
+   progress=(current-range.lower).coerceIn(0,max)
+   progressTintList=android.content.res.ColorStateList.valueOf(0xFFFFD76A.toInt())
+   thumbTintList=android.content.res.ColorStateList.valueOf(Color.WHITE)
+  }
+  val card=LinearLayout(this).apply{
+   orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER
+   setPadding(d(10f),d(5f),d(10f),d(3f));background=glass(18f,232);elevation=d(18f).toFloat()
+   addView(evLabel)
+   addView(seek,LinearLayout.LayoutParams(d(142f),d(30f)))
+  }
+  seek.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{
+   override fun onProgressChanged(s:SeekBar?,v:Int,user:Boolean){
+    if(user){
+     val index=v+range.lower
+     camera?.cameraControl?.setExposureCompensationIndex(index)
+     val step=evStep?.toFloat()?:1f
+     evLabel.text="EV  "+String.format(Locale.US,"%+.1f",index*step)
+    }
+   }
+   override fun onStartTrackingTouch(s:SeekBar?){}
+   override fun onStopTrackingTouch(s:SeekBar?){}
+  })
+  val cardLp=FrameLayout.LayoutParams(d(164f),d(58f))
+  val left=(x+d(38f)).toInt().coerceIn(d(8f),(root.width-d(172f)).coerceAtLeast(d(8f)))
+  val top=(y+d(38f)).toInt().coerceIn(d(65f),(root.height-d(245f)).coerceAtLeast(d(65f)))
+  cardLp.leftMargin=left;cardLp.topMargin=top
+  root.addView(card,cardLp)
+  card.alpha=0f;card.translationY=d(8f).toFloat()
+  card.animate().alpha(1f).translationY(0f).setDuration(180).start()
+  card.postDelayed({card.animate().alpha(0f).setDuration(350).withEndAction{root.removeView(card)}.start()},6500)
+  ring.postDelayed({if(ring.parent===root)root.removeView(ring)},6500)
+  status.text="FOCUS  •  SLIDE TO ADJUST EV"
  }
  private fun toggleControls(force:Boolean?=null){
   controlsExpanded=force?:!controlsExpanded
