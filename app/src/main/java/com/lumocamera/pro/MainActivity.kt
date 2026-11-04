@@ -74,62 +74,109 @@ class MainActivity : ComponentActivity() {
   setPadding(d(14f),d(10f),d(14f),d(10f));background=glass(24f,if(active)225 else 100)
   elevation=d(5f).toFloat();isClickable=true
  }
+ private fun roundControl(symbol:String, size:Float=21f, fill:Int=0x55000000, action:()->Unit)=txt(symbol,size,Color.WHITE,true).apply{
+  background=GradientDrawable().apply{shape=GradientDrawable.OVAL;setColor(fill);setStroke(d(1f),0x55FFFFFF)}
+  isClickable=true;isFocusable=true;setOnClickListener{action()}
+  elevation=d(3f).toFloat()
+ }
  private fun makeUi(){
   val root=FrameLayout(this).apply{setBackgroundColor(Color.BLACK)}
-  preview=PreviewView(this).apply{scaleType=PreviewView.ScaleType.FILL_CENTER;implementationMode=PreviewView.ImplementationMode.COMPATIBLE}
+  preview=PreviewView(this).apply{
+   scaleType=PreviewView.ScaleType.FILL_CENTER
+   implementationMode=PreviewView.ImplementationMode.COMPATIBLE
+  }
   root.addView(preview,FrameLayout.LayoutParams(-1,-1))
-  pose=PoseView(this);root.addView(pose,FrameLayout.LayoutParams(-1,-1))
-  preview.setOnTouchListener{_,e->if(e.action==MotionEvent.ACTION_UP){
-   val p=preview.meteringPointFactory.createPoint(e.x,e.y)
-   camera?.cameraControl?.startFocusAndMetering(FocusMeteringAction.Builder(p).build())
-   val ring=View(this).apply{background=GradientDrawable().apply{shape=GradientDrawable.OVAL;setColor(Color.TRANSPARENT);setStroke(d(2f),0xFFFFD98A.toInt())}}
-   val lp=FrameLayout.LayoutParams(d(54f),d(54f));lp.leftMargin=e.x.toInt()-d(27f);lp.topMargin=e.y.toInt()-d(27f)
-   root.addView(ring,lp);ring.scaleX=.6f;ring.scaleY=.6f
-   ring.animate().scaleX(1f).scaleY(1f).alpha(0f).setDuration(750).withEndAction{root.removeView(ring)}.start()
-  };true}
-  val top=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(d(17f),d(8f),d(9f),d(8f));background=glass(30f,190);elevation=d(12f).toFloat()}
-  val brand=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
-  brand.addView(txt("LUMO",19f,Color.WHITE,true));brand.addView(txt("CAMERA  PRO",8f,0xFFCAB8FF.toInt(),true));top.addView(brand)
+  pose=PoseView(this)
+  root.addView(pose,FrameLayout.LayoutParams(-1,-1))
+  preview.setOnTouchListener{_,e->
+   if(e.action==MotionEvent.ACTION_UP){
+    val point=preview.meteringPointFactory.createPoint(e.x,e.y)
+    camera?.cameraControl?.startFocusAndMetering(FocusMeteringAction.Builder(point).build())
+    val ring=View(this).apply{background=GradientDrawable().apply{shape=GradientDrawable.OVAL;setColor(Color.TRANSPARENT);setStroke(d(1.5f),0xFFFFD76A.toInt())}}
+    val lp=FrameLayout.LayoutParams(d(58f),d(58f));lp.leftMargin=e.x.toInt()-d(29f);lp.topMargin=e.y.toInt()-d(29f)
+    root.addView(ring,lp);ring.scaleX=.75f;ring.scaleY=.75f
+    ring.animate().scaleX(1f).scaleY(1f).alpha(0f).setDuration(650).withEndAction{root.removeView(ring)}.start()
+   };true
+  }
+
+  // Subtle top and bottom scrims, like a native camera viewfinder.
+  val topScrim=View(this).apply{background=GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,intArrayOf(0x99000000.toInt(),0x00000000))}
+  root.addView(topScrim,FrameLayout.LayoutParams(-1,d(190f),Gravity.TOP))
+  val bottomScrim=View(this).apply{background=GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,intArrayOf(0xDD000000.toInt(),0x00000000))}
+  root.addView(bottomScrim,FrameLayout.LayoutParams(-1,d(310f),Gravity.BOTTOM))
+
+  val top=LinearLayout(this).apply{
+   orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL
+   setPadding(d(18f),0,d(18f),0)
+  }
+  top.addView(roundControl("ϟ",22f){Toast.makeText(this,"Flash control",Toast.LENGTH_SHORT).show()},LinearLayout.LayoutParams(d(44f),d(44f)))
   top.addView(View(this),LinearLayout.LayoutParams(0,1,1f))
-  top.addView(chip("POSE").apply{setOnClickListener{poseOn=!poseOn;pose.visibility=if(poseOn)View.VISIBLE else View.GONE}})
-  top.addView(chip("⚙",true,19f).apply{setOnClickListener{settings()}})
-  root.addView(top,FrameLayout.LayoutParams(-1,d(65f),Gravity.TOP).apply{setMargins(d(12f),d(38f),d(12f),0)})
+  top.addView(txt("LUMO",13f,0xFFEAEAEA.toInt(),true).apply{letterSpacing=.22f})
+  top.addView(View(this),LinearLayout.LayoutParams(0,1,1f))
+  top.addView(roundControl("⌄",24f){settings()},LinearLayout.LayoutParams(d(44f),d(44f)))
+  root.addView(top,FrameLayout.LayoutParams(-1,d(54f),Gravity.TOP).apply{topMargin=d(42f)})
 
-  val side=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;background=glass(24f,150);setPadding(d(5f),d(8f),d(5f),d(8f))}
-  side.addView(chip("EV").apply{setOnClickListener{exposure()}})
-  side.addView(chip("◐",false,18f).apply{setOnClickListener{filtersOn=!filtersOn;filterPanel.visibility=if(filtersOn)View.VISIBLE else View.GONE}})
-  root.addView(side,FrameLayout.LayoutParams(d(58f),-2,Gravity.RIGHT or Gravity.CENTER_VERTICAL).apply{rightMargin=d(12f)})
+  val quick=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER;setPadding(d(14f),d(7f),d(14f),d(7f));background=GradientDrawable().apply{shape=GradientDrawable.RECTANGLE;cornerRadius=d(24f).toFloat();setColor(0x66000000)}}
+  quick.addView(txt("RAW",10f,Color.WHITE,true).apply{setPadding(d(12f),d(8f),d(12f),d(8f));setOnClickListener{settings()}})
+  quick.addView(txt("4:3",10f,Color.WHITE,true).apply{setPadding(d(12f),d(8f),d(12f),d(8f));setOnClickListener{settings()}})
+  quick.addView(txt("⌁",18f,Color.WHITE,true).apply{setPadding(d(12f),d(4f),d(12f),d(4f));setOnClickListener{filtersOn=!filtersOn;filterPanel.visibility=if(filtersOn)View.VISIBLE else View.GONE}})
+  root.addView(quick,FrameLayout.LayoutParams(-2,-2,Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply{topMargin=d(108f)})
 
-  val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER_HORIZONTAL;setPadding(d(13f),d(14f),d(13f),d(13f));background=glass(34f,215);elevation=d(20f).toFloat()}
-  val zooms=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER}
+  filterPanel=LinearLayout(this).apply{
+   orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER;visibility=View.GONE
+   setPadding(d(8f),d(6f),d(8f),d(6f));background=GradientDrawable().apply{cornerRadius=d(18f).toFloat();setColor(0xCC111111.toInt())}
+  }
+  listOf("ORIGINAL","VIVID","WARM","COOL").forEach{n->
+   filterPanel.addView(txt(n,9f,Color.WHITE,true).apply{setPadding(d(9f),d(8f),d(9f),d(8f));setOnClickListener{Toast.makeText(this@MainActivity,"Live filter preview is not connected yet",Toast.LENGTH_SHORT).show()} })
+  }
+  root.addView(filterPanel,FrameLayout.LayoutParams(-2,-2,Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply{topMargin=d(158f)})
+
+  val lower=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER_HORIZONTAL}
+  val zooms=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER;setPadding(d(9f),d(5f),d(9f),d(5f));background=GradientDrawable().apply{cornerRadius=d(22f).toFloat();setColor(0x66000000)}}
   listOf("0.6×" to .6f,"1×" to 1f,"2×" to 2f,"3×" to 3f).forEach{item->
-   zooms.addView(chip(item.first,item.second==1f).apply{setOnClickListener{setZoom(item.second)};setOnLongClickListener{setZoom(item.second);true}},
-    LinearLayout.LayoutParams(0,d(42f),1f).apply{setMargins(d(2f),0,d(2f),0)})
-  };panel.addView(zooms)
-  filterPanel=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER;visibility=View.GONE;setPadding(0,d(7f),0,0)}
-  listOf("NATURAL","VIVID","WARM","COOL").forEach{n->filterPanel.addView(chip(n).apply{setOnClickListener{Toast.makeText(this@MainActivity,"Filter preview is not applied to captured image yet",Toast.LENGTH_SHORT).show()}},LinearLayout.LayoutParams(0,d(36f),1f))}
-  panel.addView(filterPanel)
-  val actions=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER;setPadding(0,d(10f),0,d(3f))}
-  actions.addView(chip("▧",false,24f).apply{setOnClickListener{runCatching{startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW).setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,"image/*"))}}},LinearLayout.LayoutParams(0,d(70f),1f))
-  shutter=txt("●",56f,Color.WHITE,true).apply{background=GradientDrawable().apply{shape=GradientDrawable.OVAL;setColor(0x22FFFFFF);setStroke(d(4f),Color.WHITE)};setOnClickListener{if(videoMode)recordVideo()else takePhoto()}}
-  actions.addView(shutter,LinearLayout.LayoutParams(d(78f),d(78f)))
-  actions.addView(chip("⟳",false,27f).apply{setOnClickListener{front=!front;startCamera()}},LinearLayout.LayoutParams(0,d(70f),1f))
-  panel.addView(actions)
-  val modes=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER}
-  modes.addView(chip("PHOTO",true).apply{setOnClickListener{videoMode=false;refresh()}})
-  modes.addView(chip("VIDEO").apply{setOnClickListener{videoMode=true;refresh()}})
-  modes.addView(chip("MY POSE",true).apply{setOnClickListener{openPoseSection()}})
-  panel.addView(modes)
-  qualityText=txt("PHOTO  •  MAX QUALITY",9f,0xFFD2CBE4.toInt(),true).apply{setPadding(0,d(7f),0,0);setOnClickListener{quality=if(quality==Quality.FHD)Quality.UHD else Quality.FHD;refresh();startCamera()}}
-  panel.addView(qualityText)
-  status=txt("READY  •  TAP TO FOCUS",9f,0xFFB8B5C6.toInt(),true).apply{setPadding(0,d(5f),0,0)}
-  panel.addView(status)
-  root.addView(panel,FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM).apply{setMargins(d(11f),0,d(11f),d(12f))})
-  setContentView(root)
-  panel.translationY=d(40f).toFloat();panel.alpha=0f
-  panel.animate().translationY(0f).alpha(1f).setDuration(650).setInterpolator(DecelerateInterpolator()).start()
- }
+   zooms.addView(txt(item.first,12f,if(item.second==1f)0xFFFFD36B.toInt() else Color.WHITE,true).apply{
+    setPadding(d(12f),d(9f),d(12f),d(9f));setOnClickListener{setZoom(item.second)}
+   })
+  }
+  lower.addView(zooms)
 
+  val modes=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER;setPadding(0,d(13f),0,d(10f))}
+  fun mode(label:String, selected:Boolean, click:()->Unit)=txt(label,12f,if(selected)0xFFFFD36B.toInt() else 0xFFE7E7E7.toInt(),selected).apply{
+   setPadding(d(13f),d(8f),d(13f),d(8f));setOnClickListener{click()}
+  }
+  modes.addView(mode("VIDEO",false){videoMode=true;refresh()})
+  modes.addView(mode("PHOTO",true){videoMode=false;refresh()})
+  modes.addView(mode("MY POSE",false){openPoseSection()})
+  lower.addView(modes)
+
+  val controls=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER;setPadding(d(20f),0,d(20f),d(7f))}
+  val gallery=roundControl("▧",23f,0x66000000){runCatching{startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW).setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,"image/*"))}}
+  controls.addView(gallery,LinearLayout.LayoutParams(d(54f),d(54f)).apply{rightMargin=d(34f)})
+
+  shutter=txt("",20f,Color.BLACK,true).apply{
+   background=GradientDrawable().apply{shape=GradientDrawable.OVAL;setColor(Color.WHITE);setStroke(d(4f),0x99FFFFFF.toInt())}
+   elevation=d(5f).toFloat()
+   setOnClickListener{if(videoMode)recordVideo()else takePhoto()}
+  }
+  controls.addView(shutter,LinearLayout.LayoutParams(d(76f),d(76f)))
+
+  val flip=roundControl("⟳",29f,0x66000000){front=!front;startCamera()}
+  controls.addView(flip,LinearLayout.LayoutParams(d(54f),d(54f)).apply{leftMargin=d(34f)})
+  lower.addView(controls)
+
+  qualityText=txt("MAX  •  PHOTO QUALITY",9f,0xFFDDDDDD.toInt(),true).apply{
+   setPadding(0,d(2f),0,d(5f))
+   setOnClickListener{quality=if(quality==Quality.FHD)Quality.UHD else Quality.FHD;refresh();startCamera()}
+  }
+  lower.addView(qualityText)
+  status=txt("TAP TO FOCUS",9f,0xFFBBBBBB.toInt(),true).apply{setPadding(0,d(2f),0,d(7f))}
+  lower.addView(status)
+  root.addView(lower,FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM).apply{leftMargin=d(10f);rightMargin=d(10f);bottomMargin=d(17f)})
+
+  setContentView(root)
+  lower.translationY=d(35f).toFloat();lower.alpha=0f
+  lower.animate().translationY(0f).alpha(1f).setDuration(420).setInterpolator(DecelerateInterpolator()).start()
+ }
  private fun loadPose(uri:Uri){
   try{
    val source=contentResolver.openInputStream(uri)
