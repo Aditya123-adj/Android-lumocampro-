@@ -107,33 +107,36 @@ class MainActivity : ComponentActivity() {
    true
   }
 
-  val top=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(d(14f),0,d(14f),0)}
-  top.addView(roundControl("×",23f,0x99BFC0C0.toInt()){Toast.makeText(this,"Camera view",Toast.LENGTH_SHORT).show()},LinearLayout.LayoutParams(d(42f),d(42f)))
-  top.addView(txt("Pose Camera",14f,Color.WHITE,true).apply{setPadding(d(12f),0,0,0)})
-  top.addView(View(this),LinearLayout.LayoutParams(0,1,1f))
-  top.addView(roundControl("⌕",21f,0x99BFC0C0.toInt()){settings()},LinearLayout.LayoutParams(d(42f),d(42f)))
-  top.addView(roundControl("⋮",21f,0x99BFC0C0.toInt()){settings()},LinearLayout.LayoutParams(d(42f),d(42f)).apply{leftMargin=d(7f)})
-  root.addView(top,FrameLayout.LayoutParams(-1,d(54f),Gravity.TOP).apply{topMargin=d(35f)})
-
-  val topControls=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(d(9f),d(6f),d(9f),d(6f));background=glass(25f,225)}
-  val editRow=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL}
-  val editButton=chip("Edit",true,10f)
-  editRow.addView(editButton,LinearLayout.LayoutParams(-2,d(29f)))
-  editRow.addView(View(this),LinearLayout.LayoutParams(0,d(1f),1f))
-  editRow.addView(View(this).apply{background=GradientDrawable().apply{shape=GradientDrawable.OVAL;setColor(0xFFB9E8C6.toInt())}},LinearLayout.LayoutParams(d(7f),d(7f)))
-  topControls.addView(editRow,LinearLayout.LayoutParams(-1,d(31f)))
-  val quick=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER;setPadding(d(2f),d(2f),d(2f),0)}
-  listOf("⚡" to "FLASH","◉" to "LIVE","▣" to "ASPECT","◷" to "TIMER","±" to "EXPOSURE","✧" to "STYLES").forEach{item->
-   quick.addView(txt(item.first,19f,Color.WHITE,true).apply{setPadding(d(9f),d(5f),d(9f),d(5f));contentDescription=item.second;setOnClickListener{controlAction(item.second)}})
+  // Reference-matched floating control rail: no legacy app header or stacked toolbar.
+  val topControls=LinearLayout(this).apply{
+   orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL
+   setPadding(d(8f),d(6f),d(8f),d(6f))
+   background=GradientDrawable().apply{cornerRadius=d(28f).toFloat();setColor(0xA9161720.toInt());setStroke(d(1f),0x44FFFFFF)}
+   elevation=d(12f).toFloat()
+  }
+  val editButton=txt("Edit",11f,Color.WHITE,true).apply{
+   background=GradientDrawable().apply{cornerRadius=d(18f).toFloat();setColor(0xFF343641.toInt());setStroke(d(1f),0x66FFFFFF)}
+   setPadding(d(13f),d(8f),d(13f),d(8f));isClickable=true
+  }
+  topControls.addView(editButton,LinearLayout.LayoutParams(-2,d(32f)))
+  topControls.addView(View(this).apply{
+   background=GradientDrawable().apply{shape=GradientDrawable.OVAL;setColor(0xFFB8E8C7.toInt())}
+  },LinearLayout.LayoutParams(d(6f),d(6f)).apply{leftMargin=d(9f);rightMargin=d(5f)})
+  val quick=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL}
+  listOf("ϟ" to "FLASH","◉" to "LIVE","▤" to "ASPECT","◷" to "TIMER","±" to "EXPOSURE","✧" to "STYLES").forEach{item->
+   quick.addView(txt(item.first,18f,Color.WHITE,true).apply{
+    setPadding(d(8f),d(5f),d(8f),d(5f));contentDescription=item.second
+    setOnClickListener{controlAction(item.second)}
+   },LinearLayout.LayoutParams(d(34f),d(34f)))
   }
   topControls.addView(quick)
   editButton.setOnClickListener{
    val editing=editButton.text.toString()=="Edit"
-   editButton.text=if(editing)"Cancel" else "Edit"
-   editButton.background=glass(20f,if(editing)245 else 185)
-   Toast.makeText(this,if(editing)"Drag controls customization preview" else "Editing closed",Toast.LENGTH_SHORT).show()
+   editButton.text=if(editing)"Done" else "Edit"
+   editButton.background=GradientDrawable().apply{cornerRadius=d(18f).toFloat();setColor(if(editing)0xFF665B3E.toInt() else 0xFF343641.toInt());setStroke(d(1f),0x77FFFFFF)}
+   toggleControls(editing)
   }
-  root.addView(topControls,FrameLayout.LayoutParams(-2,-2,Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply{topMargin=d(83f)})
+  root.addView(topControls,FrameLayout.LayoutParams(-2,-2,Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply{topMargin=d(48f)})
   controlsPanel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER_HORIZONTAL;setPadding(d(16f),d(15f),d(16f),d(13f));background=GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,intArrayOf(0xE52D303B.toInt(),0xD9161822.toInt())).apply{cornerRadii=floatArrayOf(d(38f).toFloat(),d(38f).toFloat(),d(38f).toFloat(),d(38f).toFloat(),d(18f).toFloat(),d(18f).toFloat(),d(18f).toFloat(),d(18f).toFloat());setStroke(d(1f),0x66FFFFFF)};visibility=View.GONE;elevation=d(22f).toFloat()}
   controlsPanel.addView(txt("ADD PHOTO CONTROLS",11f,Color.WHITE,true).apply{letterSpacing=.08f})
   val controlRows=listOf(listOf("⚡" to "FLASH","◉" to "LIVE","▣" to "ASPECT"),listOf("◷" to "TIMER","±" to "EXPOSURE","✧" to "STYLES"),listOf("◈" to "FILTER","◉" to "DEPTH","☾" to "NIGHT"))
